@@ -1,4 +1,8 @@
 name: Check Workflow Sync
+# This workflow syncs workflows from the Open-Silicon-MPW repository into
+# .github/workflows-staged/ of the generated IP repository. It does not
+# update .github/workflows automatically. After a sync, it raises/updates an
+# issue with the list of staged files and a manual copy instruction.
 
 on:
   schedule:
@@ -8,6 +12,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   check:
@@ -60,6 +65,7 @@ jobs:
             for file in "${updated[@]}"; do
               echo "- ${file}"
             done
+            printf 'UPDATED_FILES=%s\n' "${updated[*]}" >> "$GITHUB_ENV"
           fi
 
           if [ ${#missing[@]} -ne 0 ]; then
@@ -70,7 +76,7 @@ jobs:
             exit 1
           fi
 
-      - name: Create or update sync PR
+      - name: Create or update sync issue
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -79,29 +85,18 @@ jobs:
 
           dest_dir="${DEST_DIR:-.github/workflows-staged}"
 
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No workflow updates to commit."
+          if [ -z "${UPDATED_FILES:-}" ]; then
+            echo "No workflow updates to report."
             exit 0
           fi
 
-          branch="sync-workflows"
-          base_branch="${GITHUB_REF_NAME}"
+          title="Stage workflow updates from Open-Silicon-MPW"
+          body=$(printf "New workflow files were staged under %s:\n\n%s\n\nManual action:\nCopy the desired files from %s into .github/workflows to enable them.\n" "$dest_dir" "$UPDATED_FILES" "$dest_dir")
 
-          git checkout -b "$branch"
-          git add "$dest_dir"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Stage workflows from Open-Silicon-MPW"
-          git push -u origin "$branch" --force
+          issue_number=$(gh issue list --search "${title} in:title" --state open --json number --jq '.[0].number')
 
-          if gh pr list --head "$branch" --state open --json number --jq 'length' | grep -q '^0$'; then
-            gh pr create \
-              --title "Stage workflows from Open-Silicon-MPW" \
-              --body "Automated update of ${dest_dir} from ${TARGET_REPO}:${TARGET_BRANCH}/workflows. Copy into .github/workflows manually." \
-              --base "$base_branch" \
-              --head "$branch"
+          if [ -z "${issue_number}" ]; then
+            gh issue create --title "${title}" --body "${body}"
           else
-            gh pr edit "$branch" \
-              --title "Stage workflows from Open-Silicon-MPW" \
-              --body "Automated update of ${dest_dir} from ${TARGET_REPO}:${TARGET_BRANCH}/workflows. Copy into .github/workflows manually."
+            gh issue comment "${issue_number}" --body "${body}"
           fi
