@@ -1,0 +1,19 @@
+{
+  "name": "DAC-0296",
+  "design_type": "M",
+  "technology": "IHP",
+  "unique_id": "0296",
+  "license": "Apache-2.0",
+  "trl": 0,
+  "repository": "",
+  "pdk_version": "",
+  "process": "SG13G2",
+  "dependencies": {},
+  "tools": {},
+  "release": {
+    "version": "v.1.0.0",
+    "gds": "release/v.1.0.0/gds",
+    "netlist": "release/v.1.0.0/netlist",
+    "doc": "release/v.1.0.0/doc"
+  }
+}
