@@ -36,9 +36,9 @@ jobs:
             -   name: Download latest KLayout (Ubuntu amd64)
                 run: |
                     UBUNTU_VERSION=$(lsb_release -rs | cut -d. -f1)
-                    KLAYOUT_URL=$(grep -o "https://www\.klayout\.org/downloads/Ubuntu-${UBUNTU_VERSION}/[^\"]*amd64\.deb" link | head -n 1)
+                    KLAYOUT_URL=$(curl -fLs https://www.klayout.de/build.html | grep -o "https://www\.klayout\.org/downloads/Ubuntu-${UBUNTU_VERSION}/[^\"]*amd64\.deb" | head -n 1)
                     if [[ -z "$KLAYOUT_URL" ]]; then
-                        echo "KLayout .deb URL not found in link for Ubuntu ${UBUNTU_VERSION}"
+                        echo "KLayout .deb URL not found on build.html for Ubuntu ${UBUNTU_VERSION}"
                         exit 1
                     fi
                     curl -fL -o /tmp/klayout_amd64.deb "$KLAYOUT_URL"
