@@ -29,11 +29,11 @@ jobs:
           raw_base="https://raw.githubusercontent.com/${TARGET_REPO}/${TARGET_BRANCH}/workflows"
 
           mapfile -t files < <(
-            python3 -c 'import json,sys,urllib.request;url=sys.argv[1];data=json.load(urllib.request.urlopen(url));files=[item.get("name","") for item in data if isinstance(data,list) and item.get("name","").endswith((".yml",".yaml"))];print("\n".join(sorted(files)))' "$api_url"
+            python3 -c 'import json,sys,urllib.request;url=sys.argv[1];data=json.load(urllib.request.urlopen(url));files=[item.get("name","") for item in data if isinstance(data,list) and item.get("name","").endswith((".yml",".yaml")) and item.get("name","") != "check-workflow-sync.yml"];print("\n".join(sorted(files)))' "$api_url"
           )
 
           if [ ${#files[@]} -eq 0 ]; then
-            echo "::warning::No workflow files found in ${TARGET_REPO}:${TARGET_BRANCH}/workflows. Skipping sync."
+            echo "::warning::No workflow files to sync from ${TARGET_REPO}:${TARGET_BRANCH}/workflows. Skipping sync."
             exit 0
           fi
 
