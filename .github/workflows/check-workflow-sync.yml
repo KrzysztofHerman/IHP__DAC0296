@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: write
-  workflows: write
+  pull-requests: write
 
 jobs:
   check:
@@ -68,8 +68,10 @@ jobs:
             exit 1
           fi
 
-      - name: Commit synced workflows
+      - name: Create or update sync PR
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -78,8 +80,24 @@ jobs:
             exit 0
           fi
 
+          branch="sync-workflows"
+          base_branch="${GITHUB_REF_NAME}"
+
+          git checkout -b "$branch"
           git add .github/workflows
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Sync workflows from Open-Silicon-MPW"
-          git push
+          git push -u origin "$branch" --force
+
+          if gh pr list --head "$branch" --state open --json number --jq 'length' | grep -q '^0$'; then
+            gh pr create \
+              --title "Sync workflows from Open-Silicon-MPW" \
+              --body "Automated update of .github/workflows from ${TARGET_REPO}:${TARGET_BRANCH}/workflows." \
+              --base "$base_branch" \
+              --head "$branch"
+          else
+            gh pr edit "$branch" \
+              --title "Sync workflows from Open-Silicon-MPW" \
+              --body "Automated update of .github/workflows from ${TARGET_REPO}:${TARGET_BRANCH}/workflows."
+          fi
