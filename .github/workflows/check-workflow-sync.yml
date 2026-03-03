@@ -38,6 +38,7 @@ jobs:
           fi
 
           dest_dir=".github/workflows-staged"
+          echo "DEST_DIR=${dest_dir}" >> "$GITHUB_ENV"
           mkdir -p "$dest_dir"
 
           missing=()
@@ -76,7 +77,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          if ! git status --porcelain | grep -q '^ M \|^A '; then
+          dest_dir="${DEST_DIR:-.github/workflows-staged}"
+
+          if [ -z "$(git status --porcelain)" ]; then
             echo "No workflow updates to commit."
             exit 0
           fi
