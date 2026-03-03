@@ -35,9 +35,10 @@ jobs:
                     sudo apt-get install -y jq
             -   name: Download latest KLayout (Ubuntu amd64)
                 run: |
-                    KLAYOUT_URL=$(grep -o 'https://[^\"]*amd64\.deb' link | head -n 1)
+                    UBUNTU_VERSION=$(lsb_release -rs | cut -d. -f1)
+                    KLAYOUT_URL=$(grep -o "https://www\.klayout\.org/downloads/Ubuntu-${UBUNTU_VERSION}/[^\"]*amd64\.deb" link | head -n 1)
                     if [[ -z "$KLAYOUT_URL" ]]; then
-                        echo "KLayout .deb URL not found in link"
+                        echo "KLayout .deb URL not found in link for Ubuntu ${UBUNTU_VERSION}"
                         exit 1
                     fi
                     curl -fL -o /tmp/klayout_amd64.deb "$KLAYOUT_URL"
