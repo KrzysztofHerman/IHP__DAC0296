@@ -33,32 +33,6 @@ jobs:
                 run: |
                     sudo apt-get update -qq -y
                     sudo apt-get install -y jq python3-pip
-            -   name: Download latest KLayout (Ubuntu amd64)
-                run: |
-                    UBUNTU_VERSION=$(lsb_release -rs | cut -d. -f1)
-                    KLAYOUT_URL=$(curl -fLs https://www.klayout.de/build.html | grep -o "https://www\.klayout\.org/downloads/Ubuntu-${UBUNTU_VERSION}/[^\"]*amd64\.deb" | head -n 1)
-                    if [[ -z "$KLAYOUT_URL" ]]; then
-                        echo "KLayout .deb URL not found on build.html for Ubuntu ${UBUNTU_VERSION}"
-                        exit 1
-                    fi
-                    curl -fL -o /tmp/klayout_amd64.deb "$KLAYOUT_URL"
-                    if ! dpkg-deb --info /tmp/klayout_amd64.deb >/dev/null 2>&1; then
-                        echo "Downloaded file is not a valid Debian archive"
-                        exit 1
-                    fi
-            -   name: Install KLayout
-                run: |
-                    sudo dpkg -i /tmp/klayout_amd64.deb || true
-                    sudo apt-get install -f -y
-                    klayout -v
-            -   name: Install IHP-Open-PDK Python requirements
-                run: |
-                    python3 -m pip install --upgrade pip
-                    python3 -m pip install -r https://raw.githubusercontent.com/IHP-GmbH/IHP-Open-PDK/main/requirements.txt
-            -   name: Fetch IHP DRC deck and dependencies
-                run: |
-                    git clone --depth 1 --filter=blob:none --sparse https://github.com/IHP-GmbH/IHP-Open-PDK.git /tmp/ihp-open-pdk
-                    git -C /tmp/ihp-open-pdk sparse-checkout set --no-cone /ihp-sg13g2/libs.tech/klayout/tech/drc/ /ihp-sg13g2/libs.tech/klayout/tech/lvs/ /ihp-sg13g2/libs.tech/klayout/python/sg13g2_pycell_lib/sg13g2_tech_mod.json
             -   name: Resolve release inputs
                 run: |
                     GDS_PATH=$(jq -r '.release.gds // empty' doc/info.json)
@@ -111,6 +85,36 @@ jobs:
                     echo "run_drc=$RUN_DRC" >> "$GITHUB_OUTPUT"
                     echo "run_lvs=$RUN_LVS" >> "$GITHUB_OUTPUT"
                 id: resolve-inputs
+            -   name: Download latest KLayout (Ubuntu amd64)
+                if: steps.resolve-inputs.outputs.run_drc == 'true' || steps.resolve-inputs.outputs.run_lvs == 'true'
+                run: |
+                    UBUNTU_VERSION=$(lsb_release -rs | cut -d. -f1)
+                    KLAYOUT_URL=$(curl -fLs https://www.klayout.de/build.html | grep -o "https://www\.klayout\.org/downloads/Ubuntu-${UBUNTU_VERSION}/[^\"]*amd64\.deb" | head -n 1)
+                    if [[ -z "$KLAYOUT_URL" ]]; then
+                        echo "KLayout .deb URL not found on build.html for Ubuntu ${UBUNTU_VERSION}"
+                        exit 1
+                    fi
+                    curl -fL -o /tmp/klayout_amd64.deb "$KLAYOUT_URL"
+                    if ! dpkg-deb --info /tmp/klayout_amd64.deb >/dev/null 2>&1; then
+                        echo "Downloaded file is not a valid Debian archive"
+                        exit 1
+                    fi
+            -   name: Install KLayout
+                if: steps.resolve-inputs.outputs.run_drc == 'true' || steps.resolve-inputs.outputs.run_lvs == 'true'
+                run: |
+                    sudo dpkg -i /tmp/klayout_amd64.deb || true
+                    sudo apt-get install -f -y
+                    klayout -v
+            -   name: Install IHP-Open-PDK Python requirements
+                if: steps.resolve-inputs.outputs.run_drc == 'true' || steps.resolve-inputs.outputs.run_lvs == 'true'
+                run: |
+                    python3 -m pip install --upgrade pip
+                    python3 -m pip install -r https://raw.githubusercontent.com/IHP-GmbH/IHP-Open-PDK/main/requirements.txt
+            -   name: Fetch IHP DRC deck and dependencies
+                if: steps.resolve-inputs.outputs.run_drc == 'true' || steps.resolve-inputs.outputs.run_lvs == 'true'
+                run: |
+                    git clone --depth 1 --filter=blob:none --sparse https://github.com/IHP-GmbH/IHP-Open-PDK.git /tmp/ihp-open-pdk
+                    git -C /tmp/ihp-open-pdk sparse-checkout set --no-cone /ihp-sg13g2/libs.tech/klayout/tech/drc/ /ihp-sg13g2/libs.tech/klayout/tech/lvs/ /ihp-sg13g2/libs.tech/klayout/python/sg13g2_pycell_lib/sg13g2_tech_mod.json
             -   name: Run DRC on release GDS
                 if: steps.resolve-inputs.outputs.run_drc == 'true'
                 run: |
